@@ -1,0 +1,79 @@
+name: Release
+
+# A tag <id>-v<version>, such as airplay-v1.0.0, releases that extension and
+# updates the catalog.
+on:
+  push:
+    tags: ["*-v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  meta:
+    runs-on: ubuntu-24.04
+    outputs:
+      id: ${{ steps.tag.outputs.id }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the tag against the manifest
+        id: tag
+        run: |
+          tag="$GITHUB_REF_NAME"
+          id="${tag%-v*}"
+          version="${tag##*-v}"
+          if [ ! -d "extensions/$id" ]; then
+            echo "No extension called $id" >&2
+            exit 1
+          fi
+          python3 scripts/validate.py "extensions/$id" --version "$version"
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: meta
+    strategy:
+      matrix:
+        include:
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+          - arch: amd64
+            runner: ubuntu-24.04
+    runs-on: ${{ matrix.runner }}
+    container: debian:bookworm
+    env:
+      ID: ${{ needs.meta.outputs.id }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: sh "extensions/$ID/build.sh" dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-${{ matrix.arch }}
+          path: dist/
+
+  publish:
+    needs: [meta, build]
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ID: ${{ needs.meta.outputs.id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: package-*
+          merge-multiple: true
+      - name: Publish the release
+        run: |
+          python3 scripts/catalog.py release-info "extensions/$ID" dist "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME" > "dist/$ID.json"
+          (cd dist && sha256sum ./*.tar.gz > SHA256SUMS)
+          gh release create "$GITHUB_REF_NAME" dist/* --title "$GITHUB_REF_NAME" --generate-notes --latest=false
+      - name: Update the catalog
+        run: |
+          python3 scripts/catalog.py merge "$GITHUB_REPOSITORY" > catalog.json
+          url="https://github.com/$GITHUB_REPOSITORY/releases/download/catalog/catalog.json"
+          gh release view catalog > /dev/null 2>&1 ||
+            gh release create catalog --title "Catalog" --latest=false \
+              --notes "The extensions catalog BatoX reads: $url. Updated by every extension release."
+          gh release upload catalog catalog.json --clobber

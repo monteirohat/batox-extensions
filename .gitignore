@@ -1,0 +1,9 @@
+# Build output
+/dist/
+/build/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

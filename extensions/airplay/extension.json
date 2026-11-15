@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "id": "airplay",
+  "name": "AirPlay receiver",
+  "version": "1.0.0",
+  "summary": "Play music from an iPhone, iPad or Mac through the console: choose it in AirPlay.",
+  "description": "The console appears in AirPlay as a speaker. In Spotify, Apple Music, YouTube or any other app, choose it and the sound comes out where the console's sound goes (the output chosen on BatoX's Audio screen). EmulationStation's music goes quiet while AirPlay plays and comes back when it ends. Uses shairport-sync in classic AirPlay mode.",
+  "homepage": "https://github.com/monteirohat/batox-extensions/tree/main/extensions/airplay",
+  "license": "MIT; includes shairport-sync (MIT and others), FFmpeg, libconfig and libsoxr (LGPL-2.1)",
+  "platforms": ["arm64", "amd64"],
+  "permissions": ["network", "audio"],
+  "run": { "command": "bin/start.sh", "stopTimeoutSeconds": 10 },
+  "settings": [
+    {
+      "key": "name",
+      "label": "Name in AirPlay",
+      "description": "How the console appears on phones and computers.",
+      "default": "Batocera",
+      "control": { "type": "text" }
+    },
+    {
+      "key": "mute_menu_music",
+      "label": "Silence EmulationStation while AirPlay plays",
+      "description": "Its background music and menu sounds stop while AirPlay plays and come back when it ends. Game sound is never touched.",
+      "default": "1",
+      "control": { "type": "toggle" }
+    },
+    {
+      "key": "phone_volume",
+      "label": "The phone's volume controls the sound",
+      "description": "Off: AirPlay always plays at full volume, and the console's volume sets the level.",
+      "default": "1",
+      "control": { "type": "toggle" }
+    },
+    {
+      "key": "volume_boost",
+      "label": "Volume boost",
+      "description": "Raises the AirPlay sound, for music that sounds quieter than the console's.",
+      "default": "100",
+      "control": { "type": "range", "min": 100, "max": 200, "step": 10, "unit": "%" }
+    }
+  ]
+}
